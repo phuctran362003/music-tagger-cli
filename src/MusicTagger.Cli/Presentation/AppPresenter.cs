@@ -29,20 +29,31 @@ public sealed class AppPresenter
 
     public void ShowBanner()
     {
-        _console.Write(new Rule().RuleStyle(Style.Parse("grey")));
-        _console.Write(new Markup(
-            $"[bold]{Markup.Escape(AppInfo.ProductName)}[/]\n[grey]{Markup.Escape(AppInfo.Description)}[/]\n"));
+        var body = new Markup(
+            $"[bold]{Markup.Escape(AppInfo.ProductName)}[/]  [grey]v{Markup.Escape(AppInfo.Version)}[/]\n" +
+            $"[grey]{Markup.Escape(AppInfo.Description)}[/]");
+
+        _console.Write(new Panel(body)
+        {
+            Border = BoxBorder.Rounded,
+            BorderStyle = Style.Parse("blue"),
+            Padding = new Padding(2, 0),
+            Expand = true,
+        });
     }
 
-    public void ShowInfo(string message) => _console.MarkupLine($"[blue]{Markup.Escape(message)}[/]");
+    public void ShowInfo(string message) => Status("blue", "Info:", message);
 
-    public void ShowSuccess(string message) => _console.MarkupLine($"[green]Success: {Markup.Escape(message)}[/]");
+    public void ShowSuccess(string message) => Status("green", "Success:", message);
 
-    public void ShowWarning(string message) => _console.MarkupLine($"[yellow]Warning: {Markup.Escape(message)}[/]");
+    public void ShowWarning(string message) => Status("yellow", "Warning:", message);
 
-    public void ShowError(string message) => _console.MarkupLine($"[red]Error: {Markup.Escape(message)}[/]");
+    public void ShowError(string message) => Status("red", "Error:", message);
 
     public void ShowHint(string message) => _console.MarkupLine($"[grey]{Markup.Escape(message)}[/]");
+
+    private void Status(string color, string label, string message) =>
+        _console.MarkupLine($"[{color}]{label}[/] {Markup.Escape(message)}");
 
     public void ShowBlankLine() => _console.WriteLine();
 
@@ -50,6 +61,8 @@ public sealed class AppPresenter
     public void ShowFileTable(EditSession session)
     {
         ArgumentNullException.ThrowIfNull(session);
+
+        ShowHeading($"{session.Count} file(s)");
 
         var table = CreateTable(
             ("#", R),
@@ -60,6 +73,7 @@ public sealed class AppPresenter
             ("Type", L),
             ("Tag", L),
             ("Size", R));
+        table.Caption = new TableTitle($"[grey]{Markup.Escape(session.RootFolder)}[/]");
 
         var shown = 0;
         for (var i = 0; i < session.Count && shown < MaxTableRows; i++)
@@ -91,6 +105,11 @@ public sealed class AppPresenter
     {
         ArgumentNullException.ThrowIfNull(entry);
 
+        ShowHeading(entry.RelativePath);
+        _console.MarkupLine(
+            $"[grey]Format[/]  {Markup.Escape(FormatDisplay(entry.File.RelativePath))}    " +
+            $"[grey]Tag[/]  {Markup.Escape(entry.TagFormat.ToDisplayString())}");
+
         var table = CreateTable(("Field", L), ("Current value", L));
         foreach (var descriptor in MetadataFieldCatalog.All)
         {
@@ -100,10 +119,6 @@ public sealed class AppPresenter
         }
 
         _console.Write(table);
-
-        _console.MarkupLine($"[grey]File:[/] {Markup.Escape(entry.RelativePath)}");
-        _console.MarkupLine($"[grey]Format:[/] {Markup.Escape(FormatDisplay(entry.File.RelativePath))}");
-        _console.MarkupLine($"[grey]Tag:[/] {Markup.Escape(entry.TagFormat.ToDisplayString())}");
 
         if (entry.Error is not null)
         {
@@ -116,8 +131,7 @@ public sealed class AppPresenter
     {
         ArgumentNullException.ThrowIfNull(preview);
 
-        _console.MarkupLine($"[bold]{Markup.Escape(heading)}[/]");
-        ShowBlankLine();
+        ShowHeading(heading);
 
         var summary = CreateTable(("Item", L), ("Count", R));
         summary.AddRow(Cell("Files selected"), Cell(FormatCount(preview.SelectedCount)));
@@ -130,8 +144,7 @@ public sealed class AppPresenter
         var summaries = preview.BuildFieldSummaries();
         if (summaries.Count > 0)
         {
-            ShowBlankLine();
-            _console.MarkupLine("[bold]Field changes[/]");
+            ShowHeading("Field changes");
 
             var fields = CreateTable(("Field", L), ("Old value", L), ("New value", L), ("Files", R));
             foreach (var summaryItem in summaries)
@@ -152,8 +165,7 @@ public sealed class AppPresenter
         var updateFiles = preview.FilesToUpdate.ToList();
         if (updateFiles.Count > 0)
         {
-            ShowBlankLine();
-            _console.MarkupLine("[bold]Files that will be updated[/]");
+            ShowHeading("Files that will be updated");
 
             var files = CreateTable(("File", L), ("Changes", L), ("Note", L));
             foreach (var file in updateFiles.Take(MaxPreviewRows))
@@ -181,7 +193,7 @@ public sealed class AppPresenter
         ArgumentNullException.ThrowIfNull(preview);
 
         var manifest = preview.Manifest;
-        _console.MarkupLine("[bold]Backup to restore[/]");
+        ShowHeading("Backup to restore");
 
         var info = CreateTable(("Item", L), ("Value", L));
         info.AddRow(Cell("Backup created"), Cell(manifest.CreatedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.CurrentCulture)));
@@ -211,7 +223,7 @@ public sealed class AppPresenter
     {
         ArgumentNullException.ThrowIfNull(result);
 
-        _console.MarkupLine("[bold]Completed[/]");
+        ShowHeading("Completed");
 
         var summary = CreateTable(("Status", L), ("Files", R));
         summary.AddRow(SuccessCell("Updated"), Cell(FormatCount(result.UpdatedCount)));
@@ -221,8 +233,9 @@ public sealed class AppPresenter
         summary.AddRow(Cell("Total"), Cell(FormatCount(result.ProcessedCount)));
         _console.Write(summary);
 
-        _console.MarkupLine($"[grey]Tag format used:[/] {Markup.Escape(result.WriteVersionLabel)}");
-        _console.MarkupLine($"[grey]ID3 write version applies to:[/] {Markup.Escape(AudioFormatCatalog.Id3FormatDisplayList)}");
+        _console.MarkupLine(
+            $"[grey]Tag format used: {Markup.Escape(result.WriteVersionLabel)}. " +
+            $"ID3 write version applies to {Markup.Escape(AudioFormatCatalog.Id3FormatDisplayList)}.[/]");
 
         if (result.BackupFilePath is not null)
         {
@@ -237,8 +250,7 @@ public sealed class AppPresenter
         var failures = result.Failures.ToList();
         if (failures.Count > 0)
         {
-            ShowBlankLine();
-            _console.MarkupLine("[bold]Failed files[/]");
+            ShowHeading("Failed files");
 
             var table = CreateTable(("File", L), ("Reason", L));
             foreach (var failure in failures)
@@ -255,8 +267,7 @@ public sealed class AppPresenter
 
         if (notes.Count > 0)
         {
-            ShowBlankLine();
-            _console.MarkupLine("[bold]Notes[/]");
+            ShowHeading("Notes");
 
             var table = CreateTable(("File", L), ("Note", L));
             foreach (var note in notes)
@@ -305,10 +316,9 @@ public sealed class AppPresenter
         table.AddRow(Cell("Backup directory"), Cell(backupDirectory));
         table.AddRow(Cell("Backups available"), Cell(FormatCount(backupCount)));
         table.AddRow(Cell("Console color"), Cell(FormatColorMode(settings.ConsoleColor)));
+        table.AddRow(Cell("Settings file"), Cell(settingsFilePath));
+        table.AddRow(Cell("Log directory"), Cell(logDirectory));
         _console.Write(table);
-
-        _console.MarkupLine($"[grey]Settings file:[/] {Markup.Escape(settingsFilePath)}");
-        _console.MarkupLine($"[grey]Log directory:[/] {Markup.Escape(logDirectory)}");
     }
 
     private void ShowProblemFiles(IReadOnlyList<PlannedFileUpdate> problems)
@@ -318,8 +328,7 @@ public sealed class AppPresenter
             return;
         }
 
-        ShowBlankLine();
-        _console.MarkupLine("[bold]Files that will not be written[/]");
+        ShowHeading("Files that will not be written");
 
         var table = CreateTable(("File", L), ("Status", L), ("Reason", L));
         foreach (var problem in problems)
@@ -335,21 +344,38 @@ public sealed class AppPresenter
 
     private static Table CreateTable(params (string Header, Justify Alignment)[] columns)
     {
-        var table = new Table().Border(TableBorder.Rounded).BorderStyle(Style.Parse("grey"));
+        var table = new Table
+        {
+            Border = TableBorder.Rounded,
+            BorderStyle = Style.Parse("grey"),
+            UseSafeBorder = true,
+        };
 
         foreach (var (header, alignment) in columns)
         {
-            table.AddColumn(new TableColumn(new Markup($"[bold]{Markup.Escape(header)}[/]"))
+            table.AddColumn(new TableColumn($"[bold]{Markup.Escape(header)}[/]")
             {
-                Padding = new Padding(0, 1, 0, 1),
+                Padding = new Padding(1, 0),
                 Alignment = alignment,
+                NoWrap = header is "#" or "Type" or "Tag" or "Size" or "Files" or "Count" or "Status",
             });
         }
 
         return table;
     }
 
-    private static Markup Cell(string? text) => new(Markup.Escape(text ?? string.Empty));
+    private void ShowHeading(string title) =>
+        _console.Write(new Rule($"[bold]{Markup.Escape(title)}[/]").LeftJustified().RuleStyle("grey"));
+
+    private static Markup Cell(string? text)
+    {
+        if (string.IsNullOrEmpty(text) || text == MissingValue)
+        {
+            return new Markup("[grey]-[/]");
+        }
+
+        return new Markup(Markup.Escape(text));
+    }
 
     private static Markup SuccessCell(string text) => new($"[green]{Markup.Escape(text)}[/]");
 

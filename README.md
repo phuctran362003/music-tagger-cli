@@ -108,6 +108,50 @@ Tham số dòng lệnh:
 App cũng chạy được khi input/output bị pipe (CI, script): không có prompt tương tác nào bị treo,
 progress bar tự chuyển thành dòng chữ `Done: n/n`.
 
+### 3.1. Publish ra một file `.exe`
+
+Dùng script có sẵn (tự publish, kiểm tra file sinh ra và chạy thử `--version`):
+
+```powershell
+# Khuyến nghị: 1 file .exe duy nhất, tự chứa runtime .NET (~72 MB)
+.\publish.ps1
+
+# Bản nhỏ (~2 MB) nhưng máy đích phải có .NET 10 runtime
+.\publish.ps1 -Mode framework-dependent
+
+# Tuỳ chọn khác
+.\publish.ps1 -Runtime win-arm64 -Version 1.2.0 -Output C:\apps\musictagger
+```
+
+Kết quả:
+
+| Mode | File sinh ra | Kích thước | Máy đích cần gì |
+|---|---|---|---|
+| `self-contained` (mặc định) | `publish\win-x64-self-contained\MusicTagger.Cli.exe` | ~72 MB | không cần cài .NET |
+| `framework-dependent` | `publish\win-x64-fx\MusicTagger.Cli.exe` | ~2 MB | .NET 10 Desktop Runtime |
+
+Cả hai đều là **single-file**: thư mục `publish\` chỉ có đúng một file `.exe`, copy đi đâu cũng
+chạy, không cần `dotnet`. Nếu không muốn dùng script, lệnh tương đương là:
+
+```powershell
+dotnet publish src/MusicTagger.Cli/MusicTagger.Cli.csproj -c Release -r win-x64 `
+  --self-contained true -p:PublishSingleFile=true `
+  -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o publish\win-x64
+```
+
+Lưu ý khi phân phối:
+
+- Đổi tên file `.exe` tuỳ ý (`musictagger.exe`…) — app không phụ thuộc tên file.
+- Settings, log và backup **không** nằm cạnh `.exe` mà ở `%APPDATA%\MusicTagger\` (mục 8, 9).
+- Double-click là chạy, nhưng cửa sổ console sẽ đóng ngay khi thoát app; nếu muốn đọc lại thông
+  báo cuối, chạy từ `cmd`/PowerShell hoặc tạo shortcut.
+- Bản `self-contained` chạy được trên Windows 10/11 x64 (hoặc ARM64 với `-Runtime win-arm64`);
+  muốn chạy trên Linux/macOS thì publish với `-r linux-x64` / `-r osx-arm64` (`-Mode framework-dependent`
+  cần runtime tương ứng trên máy đích).
+- Đã kiểm chứng bản publish: `MusicTagger.Cli.exe --version` chạy đúng, và một lượt quét → sửa →
+  ghi thật trên folder trộn MP3 + WAV + FLAC ghi đúng tag (ID3v2.3/UTF-16, WAV `id3 ` v2.4, Vorbis
+  comment UTF-8), giữ nguyên audio payload.
+
 ---
 
 ## 4. Hướng dẫn sử dụng từng bước
@@ -115,12 +159,12 @@ progress bar tự chuyển thành dòng chữ `Done: n/n`.
 ### 4.1. Menu chính
 
 ```text
-────────────────────────────────────────────────────────────
-MusicTagger CLI
-Organize your offline music library
+╭──────────────────────────────────────────────────────────╮
+│ MusicTagger CLI  v1.0.0                                  │
+│ Organize your offline music library                      │
+╰──────────────────────────────────────────────────────────╯
 
-Select an option
-Arrow keys to move, Enter to choose.
+Select an option  arrows, then Enter
 > Scan and edit music folder
   Restore metadata backup
   Settings
@@ -673,6 +717,9 @@ MusicTaggerCli/
 ├── samples/
 │   ├── settings.json                # ví dụ settings
 │   └── backup-manifest.example.json # ví dụ manifest backup
+├── publish.ps1                      # publish ra 1 file .exe (xem mục 3.1)
 ├── MusicTaggerCli.sln
 └── README.md
 ```
+
+Thư mục `publish/` (kết quả publish) và `bin/`, `obj/` nằm trong `.gitignore`, không commit.

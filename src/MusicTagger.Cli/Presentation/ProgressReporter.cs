@@ -43,12 +43,18 @@ public sealed class ProgressReporter
         T? value = default;
         await _console
             .Progress()
+            .AutoClear(false)
             .Columns(
-                new SpinnerColumn(),
+                new SpinnerColumn(Spinner.Known.Dots) { Style = Style.Parse("blue") },
                 new TaskDescriptionColumn(),
-                new ProgressBarColumn(),
+                new ProgressBarColumn
+                {
+                    CompletedStyle = Style.Parse("blue"),
+                    FinishedStyle = Style.Parse("green"),
+                    RemainingStyle = Style.Parse("grey"),
+                },
                 new PercentageColumn(),
-                new ElapsedTimeColumn())
+                new ElapsedTimeColumn { Style = Style.Parse("grey") })
             .StartAsync(async context =>
             {
                 var task = context.AddTask(title, maxValue: maxValue);

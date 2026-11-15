@@ -26,7 +26,7 @@ public sealed class ConsoleInput
             _console.MarkupLine($"[grey]{Markup.Escape(hint)}[/]");
         }
 
-        _console.Markup($"[bold]{Markup.Escape(prompt)}[/] ");
+        _console.Markup($"[blue]>[/] [bold]{Markup.Escape(prompt)}[/] ");
         var line = Console.ReadLine();
 
         if (line is null)
@@ -71,14 +71,14 @@ public sealed class ConsoleInput
                     return string.Empty;
                 }
 
-                _console.MarkupLine("[yellow]Please type a value, or b to go back.[/]");
+                _console.MarkupLine("[yellow]Warning:[/] Please type a value, or b to go back.");
                 continue;
             }
 
             var error = validate?.Invoke(value);
             if (error is not null)
             {
-                _console.MarkupLine($"[red]{Markup.Escape(error)}[/]");
+                _console.MarkupLine($"[red]Error:[/] {Markup.Escape(error)}");
                 continue;
             }
 
@@ -134,10 +134,11 @@ public sealed class ConsoleInput
 
         _console.WriteLine();
         var selection = new SelectionPrompt<MenuChoice>()
-            .Title($"[bold]{Markup.Escape(prompt)}[/]\n[grey]Arrow keys to move, Enter to choose.[/]")
+            .Title($"[bold]{Markup.Escape(prompt)}[/]  [grey]arrows, then Enter[/]")
             .PageSize(Math.Max(3, Math.Min(12, choices.Count)))
             .WrapAround()
-            .MoreChoicesText("[grey](More options above or below)[/]")
+            .HighlightStyle(Style.Parse("bold invert"))
+            .MoreChoicesText("[grey]more above or below[/]")
             .UseConverter(choice => Markup.Escape(choice.Label))
             .AddChoices(choices);
 
@@ -180,7 +181,7 @@ public sealed class ConsoleInput
                 return number - 1;
             }
 
-            _console.MarkupLine($"[yellow]Enter a number between 1 and {options.Count}{(allowBack ? ", or b to go back" : string.Empty)}.[/]");
+            _console.MarkupLine($"[yellow]Warning:[/] Enter a number between 1 and {options.Count}{(allowBack ? ", or b to go back" : string.Empty)}.");
         }
     }
 
@@ -252,7 +253,7 @@ public sealed class ConsoleInput
                 return selected.ToList();
             }
 
-            _console.MarkupLine($"[yellow]Enter numbers between 1 and {options.Count} separated by commas.[/]");
+            _console.MarkupLine($"[yellow]Warning:[/] Enter numbers between 1 and {options.Count}, separated by commas.");
         }
     }
 
@@ -260,6 +261,7 @@ public sealed class ConsoleInput
     public bool? AskYesNo(string prompt, bool defaultYes = false, bool allowBack = false)
     {
         var suffix = defaultYes ? "[Y/n]" : "[y/N]";
+        _console.WriteLine();
 
         while (true)
         {
@@ -291,7 +293,7 @@ public sealed class ConsoleInput
                 return false;
             }
 
-            _console.MarkupLine("[yellow]Answer y or n.[/]");
+            _console.MarkupLine("[yellow]Warning:[/] Answer y or n.");
         }
     }
 
