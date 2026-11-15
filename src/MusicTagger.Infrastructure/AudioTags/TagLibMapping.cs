@@ -28,12 +28,22 @@ internal static class TagLibMapping
         };
     }
 
-    public static Id3Version DetectVersion(TagLib.File file)
+    /// <summary>Tag system that the writer has to use for a container.</summary>
+    public static TagLib.TagTypes PrimaryTagType(AudioTagSystem tagSystem) => tagSystem switch
+    {
+        AudioTagSystem.VorbisComment => TagLib.TagTypes.Xiph,
+        AudioTagSystem.Mp4Atom => TagLib.TagTypes.Apple,
+        _ => TagLib.TagTypes.Id3v2,
+    };
+
+    /// <summary>
+    /// Describes the tag that is really stored in the file. TagLib# exposes an empty tag object
+    /// for untagged files, so the on-disk tag types are the only reliable source here.
+    /// </summary>
+    public static TagFormat DetectTagFormat(TagLib.File file)
     {
         ArgumentNullException.ThrowIfNull(file);
 
-        // TagLib# exposes an empty ID3v2 tag object for files without any tag, so the
-        // on-disk tag types are the only reliable source here.
         var onDisk = file.TagTypesOnDisk;
 
         if ((onDisk & TagLib.TagTypes.Id3v2) != 0 &&
@@ -41,26 +51,43 @@ internal static class TagLibMapping
         {
             return id3v2.Version switch
             {
-                2 => Id3Version.Id3v22,
-                3 => Id3Version.Id3v23,
-                4 => Id3Version.Id3v24,
-                _ => Id3Version.Unknown,
+                2 => TagFormat.Id3v22,
+                3 => TagFormat.Id3v23,
+                4 => TagFormat.Id3v24,
+                _ => TagFormat.Unknown,
             };
+        }
+
+        if ((onDisk & TagLib.TagTypes.Xiph) != 0)
+        {
+            return TagFormat.VorbisComment;
+        }
+
+        if ((onDisk & TagLib.TagTypes.Apple) != 0)
+        {
+            return TagFormat.Mp4Atom;
         }
 
         if ((onDisk & TagLib.TagTypes.Id3v1) != 0)
         {
-            return Id3Version.Id3v1;
+            return TagFormat.Id3v1;
         }
 
-        return Id3Version.Unknown;
+        if ((onDisk & TagLib.TagTypes.RiffInfo) != 0)
+        {
+            return TagFormat.RiffInfo;
+        }
+
+        // Anything else means the file carries no tag we can report on (FLAC files, for
+        // instance, always have a metadata block but no comment yet).
+        return TagFormat.NoTag;
     }
 
     /// <summary>
-    /// Applies the edits to an ID3v2 tag. Only the requested fields are touched; every
+    /// Applies the edits to the tag of the file. Only the requested fields are touched; every
     /// other frame (including pictures and unknown frames) is left alone.
     /// </summary>
-    public static void ApplyEdits(TagLib.Id3v2.Tag tag, MetadataUpdate update)
+    public static void ApplyEdits(TagLib.Tag tag, MetadataUpdate update)
     {
         ArgumentNullException.ThrowIfNull(tag);
         ArgumentNullException.ThrowIfNull(update);
@@ -134,6 +161,93 @@ internal static class TagLibMapping
 
         legacy.CopyTo(target, overwrite: false);
         file.RemoveTags(TagLib.TagTypes.Id3v1);
+    }
+
+    /// <summary>
+    /// Consolidates the extra RIFF style tags a WAV/AIFF container can carry (LIST/INFO,
+    /// IDVX) into the ID3v2 tag and removes them.
+    /// </summary>
+    /// <remarks>
+    /// TagLib# rebuilds those chunks from the combined tag object while saving, which makes a
+    /// cleared field reappear and leaves two disagreeing copies of the same value. Copying the
+    /// values that only exist there into ID3v2 keeps the user's metadata, and removing the
+    /// chunks leaves exactly one tag behind, which is also the tag the verification reads back.
+    /// </remarks>
+    public static void MigrateRiffChunkTags(TagLib.File file, TagLib.Id3v2.Tag target)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentNullException.ThrowIfNull(target);
+
+        const TagLib.TagTypes riffTags =
+            TagLib.TagTypes.RiffInfo | TagLib.TagTypes.MovieId | TagLib.TagTypes.DivX;
+
+        if (file.GetTag(TagLib.TagTypes.RiffInfo, false) is { } info)
+        {
+            CopyMissingValues(info, target);
+        }
+
+        // Unconditional: the tag library also holds these chunks in memory for a file that has
+        // none on disk yet, and it would write them back on the next save.
+        file.RemoveTags(riffTags);
+    }
+
+    /// <summary>
+    /// Copies the fields that only exist in the source tag; existing target values always win,
+    /// and empty source values never overwrite anything.
+    /// </summary>
+    private static void CopyMissingValues(TagLib.Tag source, TagLib.Id3v2.Tag target)
+    {
+        if (string.IsNullOrEmpty(target.Title) && !string.IsNullOrEmpty(source.Title))
+        {
+            target.Title = source.Title;
+        }
+
+        if (target.Performers.Length == 0 && source.Performers.Length > 0)
+        {
+            target.Performers = source.Performers;
+        }
+
+        if (string.IsNullOrEmpty(target.Album) && !string.IsNullOrEmpty(source.Album))
+        {
+            target.Album = source.Album;
+        }
+
+        if (target.AlbumArtists.Length == 0 && source.AlbumArtists.Length > 0)
+        {
+            target.AlbumArtists = source.AlbumArtists;
+        }
+
+        if (target.Genres.Length == 0 && source.Genres.Length > 0)
+        {
+            target.Genres = source.Genres;
+        }
+
+        if (target.Composers.Length == 0 && source.Composers.Length > 0)
+        {
+            target.Composers = source.Composers;
+        }
+
+        if (string.IsNullOrEmpty(target.Comment) && !string.IsNullOrEmpty(source.Comment))
+        {
+            target.Comment = source.Comment;
+        }
+
+        if (target.Year == 0 && source.Year != 0)
+        {
+            target.Year = source.Year;
+        }
+
+        if (target.Track == 0 && source.Track != 0)
+        {
+            target.Track = source.Track;
+            target.TrackCount = source.TrackCount;
+        }
+
+        if (target.Disc == 0 && source.Disc != 0)
+        {
+            target.Disc = source.Disc;
+            target.DiscCount = source.DiscCount;
+        }
     }
 
     private static string? FormatPosition(uint number, uint count)

@@ -18,8 +18,8 @@ public interface IAudioMetadataWriter
         CancellationToken cancellationToken = default);
 }
 
-/// <summary>Enumerates MP3 files inside a root folder.</summary>
-public interface IMp3FileScanner
+/// <summary>Enumerates supported audio files inside a root folder.</summary>
+public interface IAudioFileScanner
 {
     Task<ScanResult> ScanAsync(string rootFolder, bool recursive, CancellationToken cancellationToken = default);
 }

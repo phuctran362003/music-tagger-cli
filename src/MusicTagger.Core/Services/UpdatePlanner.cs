@@ -100,7 +100,7 @@ public sealed class UpdatePlanner
                 [],
                 PreviewStatus.Unchanged,
                 "The requested values already match this file.",
-                read.Id3Version);
+                read.TagFormat);
         }
 
         if (_probe.IsFileReadOnly(file.FilePath))
@@ -113,7 +113,7 @@ public sealed class UpdatePlanner
                 changes,
                 PreviewStatus.Failed,
                 "The file is read-only.",
-                read.Id3Version);
+                read.TagFormat);
         }
 
         return new PlannedFileUpdate(
@@ -124,6 +124,7 @@ public sealed class UpdatePlanner
             changes,
             PreviewStatus.WillUpdate,
             read.WarningMessage,
-            read.Id3Version);
+            read.TagFormat);
     }
 }
+

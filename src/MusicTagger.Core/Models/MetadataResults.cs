@@ -2,11 +2,11 @@ namespace MusicTagger.Core.Models;
 
 public sealed record MetadataReadResult
 {
-    private MetadataReadResult(bool success, AudioMetadata metadata, Id3Version id3Version, string? errorMessage, string? warningMessage)
+    private MetadataReadResult(bool success, AudioMetadata metadata, TagFormat tagFormat, string? errorMessage, string? warningMessage)
     {
         Success = success;
         Metadata = metadata;
-        Id3Version = id3Version;
+        TagFormat = tagFormat;
         ErrorMessage = errorMessage;
         WarningMessage = warningMessage;
     }
@@ -15,17 +15,18 @@ public sealed record MetadataReadResult
 
     public AudioMetadata Metadata { get; }
 
-    public Id3Version Id3Version { get; }
+    /// <summary>Tag system that was found on disk.</summary>
+    public TagFormat TagFormat { get; }
 
     public string? ErrorMessage { get; }
 
     public string? WarningMessage { get; }
 
-    public static MetadataReadResult Ok(AudioMetadata metadata, Id3Version id3Version, string? warningMessage = null) =>
-        new(true, metadata, id3Version, null, warningMessage);
+    public static MetadataReadResult Ok(AudioMetadata metadata, TagFormat tagFormat, string? warningMessage = null) =>
+        new(true, metadata, tagFormat, null, warningMessage);
 
     public static MetadataReadResult Failure(string errorMessage) =>
-        new(false, AudioMetadata.Empty, Id3Version.Unknown, errorMessage, null);
+        new(false, AudioMetadata.Empty, TagFormat.Unknown, errorMessage, null);
 }
 
 public sealed record MetadataWriteResult

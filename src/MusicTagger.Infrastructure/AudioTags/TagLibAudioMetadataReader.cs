@@ -5,8 +5,9 @@ using MusicTagger.Core.Models;
 namespace MusicTagger.Infrastructure.AudioTags;
 
 /// <summary>
-/// Reads MP3 metadata with TagLib#. A TagLib tag object is opened per file and disposed
-/// immediately, so a folder with thousands of files is never loaded into memory at once.
+/// Reads audio metadata with TagLib# for every supported container. A TagLib file object is
+/// opened per file and disposed immediately, so a folder with thousands of files is never
+/// loaded into memory at once.
 /// </summary>
 public sealed class TagLibAudioMetadataReader : IAudioMetadataReader
 {
@@ -48,7 +49,7 @@ public sealed class TagLibAudioMetadataReader : IAudioMetadataReader
         {
             using var file = TagLib.File.Create(filePath);
             var metadata = TagLibMapping.ToAudioMetadata(file);
-            var version = TagLibMapping.DetectVersion(file);
+            var tagFormat = TagLibMapping.DetectTagFormat(file);
 
             string? warning = null;
             if (file.PossiblyCorrupt)
@@ -57,17 +58,18 @@ public sealed class TagLibAudioMetadataReader : IAudioMetadataReader
                 _log.Warn($"Possibly corrupt tag data in '{filePath}': {string.Join("; ", file.CorruptionReasons)}");
             }
 
-            return MetadataReadResult.Ok(metadata, version, warning);
+            return MetadataReadResult.Ok(metadata, tagFormat, warning);
         }
         catch (TagLib.CorruptFileException ex)
         {
-            _log.Error($"Corrupt MP3 file '{filePath}'.", ex);
-            return MetadataReadResult.Failure("The MP3 tag structure is corrupt and cannot be read safely.");
+            _log.Error($"Corrupt audio file '{filePath}'.", ex);
+            return MetadataReadResult.Failure("The tag structure of this file is corrupt and cannot be read safely.");
         }
         catch (TagLib.UnsupportedFormatException ex)
         {
             _log.Error($"Unsupported audio format in '{filePath}'.", ex);
-            return MetadataReadResult.Failure("This file is not an MP3 file that can be read.");
+            return MetadataReadResult.Failure(
+                $"This file type is not supported. Supported formats: {AudioFormatCatalog.DisplayList}.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

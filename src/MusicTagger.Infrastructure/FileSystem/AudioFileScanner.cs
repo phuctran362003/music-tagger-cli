@@ -5,10 +5,11 @@ using MusicTagger.Core.Validation;
 namespace MusicTagger.Infrastructure.FileSystem;
 
 /// <summary>
-/// Scans a folder for <c>.mp3</c> files (case insensitive). Symlinks and reparse points are
-/// never followed, so a scan can neither loop forever nor leave the root folder (SRS FR-003).
+/// Scans a folder for the audio formats listed in <see cref="AudioFormatCatalog"/>
+/// (extension matching is case insensitive). Symlinks and reparse points are never followed,
+/// so a scan can neither loop forever nor leave the root folder (SRS FR-003).
 /// </summary>
-public sealed class Mp3FileScanner : IMp3FileScanner
+public sealed class AudioFileScanner : IAudioFileScanner
 {
     private static readonly string[] ForbiddenExtensions = [".tmp", ".mttmp"];
 
@@ -17,7 +18,7 @@ public sealed class Mp3FileScanner : IMp3FileScanner
 
     private readonly IAppLog _log;
 
-    public Mp3FileScanner(IAppLog log)
+    public AudioFileScanner(IAppLog log)
     {
         _log = log ?? throw new ArgumentNullException(nameof(log));
     }
@@ -56,7 +57,7 @@ public sealed class Mp3FileScanner : IMp3FileScanner
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (!IsMp3File(filePath))
+                if (!IsSupportedAudioFile(filePath))
                 {
                     continue;
                 }
@@ -116,10 +117,9 @@ public sealed class Mp3FileScanner : IMp3FileScanner
         return new ScanResult(root, recursive, files, issues);
     }
 
-    private static bool IsMp3File(string path)
+    private static bool IsSupportedAudioFile(string path)
     {
-        var extension = Path.GetExtension(path);
-        if (!extension.Equals(".mp3", StringComparison.OrdinalIgnoreCase))
+        if (!AudioFormatCatalog.IsSupportedPath(path))
         {
             return false;
         }

@@ -27,7 +27,7 @@ public sealed class TagWriteTests
         Assert.Null(result.Metadata.Title);
         Assert.Null(result.Metadata.Artist);
         Assert.Null(result.Metadata.Album);
-        Assert.Equal(Id3Version.Unknown, result.Id3Version);
+        Assert.Equal(TagFormat.NoTag, result.TagFormat);
         Assert.False(RawId3.HasId3v2Tag(file));
     }
 
@@ -54,7 +54,7 @@ public sealed class TagWriteTests
         Assert.Equal(VietnameseArtist, read.Metadata.Artist);
         Assert.Equal(VietnameseAlbum, read.Metadata.Album);
         Assert.Equal(VietnameseComment, read.Metadata.Comment);
-        Assert.Equal(Id3Version.Id3v23, read.Id3Version);
+        Assert.Equal(TagFormat.Id3v23, read.TagFormat);
 
         // Independent byte level verification.
         Assert.Equal(3, RawId3.ReadTagVersion(file));
@@ -97,7 +97,7 @@ public sealed class TagWriteTests
 
         var read = await harness.Reader.ReadAsync(file);
         Assert.True(read.Success, read.ErrorMessage);
-        Assert.Equal(Id3Version.Id3v24, read.Id3Version);
+        Assert.Equal(TagFormat.Id3v24, read.TagFormat);
         Assert.Equal(VietnameseTitle, read.Metadata.Title);
     }
 
@@ -214,16 +214,11 @@ public sealed class TagWriteTests
         using var harness = new TestHarness();
         var file = harness.Workspace.CreateFile("legacy.mp3");
 
-        // A file that only carries an ID3v1 tag.
-        using (var legacy = TagLib.File.Create(file))
-        {
-            var v1 = (TagLib.Id3v1.Tag)legacy.GetTag(TagLib.TagTypes.Id3v1, true);
-            v1.Title = "Legacy title";
-            v1.Performers = ["Legacy artist"];
-            legacy.Save();
-        }
+        // A file that only carries an ID3v1 tag (written byte by byte, so no ID3v2 tag exists).
+        Id3v1Fixture.WriteId3v1Tag(file, "Legacy title", "Legacy artist", "Legacy album");
 
-        Assert.Equal(Id3Version.Id3v1, (await harness.Reader.ReadAsync(file)).Id3Version);
+        Assert.Equal(TagFormat.Id3v1, (await harness.Reader.ReadAsync(file)).TagFormat);
+        Assert.False(RawId3.HasId3v2Tag(file));
 
         var write = await harness.Writer.WriteAsync(
             file,
@@ -233,7 +228,7 @@ public sealed class TagWriteTests
 
         var read = await harness.Reader.ReadAsync(file);
         Assert.True(read.Success, read.ErrorMessage);
-        Assert.Equal(Id3Version.Id3v23, read.Id3Version);
+        Assert.Equal(TagFormat.Id3v23, read.TagFormat);
         Assert.Equal("Legacy title", read.Metadata.Title);
         Assert.Equal("Legacy artist", read.Metadata.Artist);
         Assert.Equal("New album", read.Metadata.Album);
@@ -319,3 +314,4 @@ public sealed class TagWriteTests
         File.SetUnixFileMode(file, UnixFileMode.UserRead | UnixFileMode.GroupRead | UnixFileMode.OtherRead);
     }
 }
+

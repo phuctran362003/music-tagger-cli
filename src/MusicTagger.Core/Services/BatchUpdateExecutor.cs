@@ -40,6 +40,18 @@ public sealed class BatchUpdateExecutor
 
         var versionLabel = request.WriteVersion.ToDisplayString();
 
+        // Nothing to do (and nothing to back up) when no file actually changes.
+        if (!request.Files.Any(plan => plan.Status == PreviewStatus.WillUpdate))
+        {
+            return new BatchExecutionResult
+            {
+                WriteVersionLabel = versionLabel,
+                Outcomes = request.Files
+                    .Select(plan => FileOutcome.FromPlan(plan, MapOutcome(plan.Status), plan.Message))
+                    .ToList(),
+            };
+        }
+
         BackupManifest manifest;
         try
         {
@@ -101,7 +113,7 @@ public sealed class BatchUpdateExecutor
                 plan.FilePath,
                 plan.RelativePath,
                 plan.CurrentMetadata,
-                plan.Id3Version,
+                plan.TagFormat,
                 MapStatus(plan.Status),
                 plan.Message))
             .ToList();
@@ -279,6 +291,14 @@ public sealed class BatchUpdateExecutor
         _ => BackupEntryStatus.Captured,
     };
 
+    private static FileOutcomeStatus MapOutcome(PreviewStatus status) => status switch
+    {
+        PreviewStatus.Unchanged => FileOutcomeStatus.Unchanged,
+        PreviewStatus.Skipped => FileOutcomeStatus.Skipped,
+        PreviewStatus.WillUpdate => FileOutcomeStatus.Updated,
+        _ => FileOutcomeStatus.Failed,
+    };
+
     private static BackupEntryStatus MapStatus(FileOutcomeStatus status) => status switch
     {
         FileOutcomeStatus.Updated => BackupEntryStatus.Updated,
@@ -287,3 +307,4 @@ public sealed class BatchUpdateExecutor
         _ => BackupEntryStatus.Failed,
     };
 }
+

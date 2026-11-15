@@ -1,6 +1,6 @@
 namespace MusicTagger.Core.Models;
 
-/// <summary>An MP3 file discovered by a folder scan.</summary>
+/// <summary>An audio file discovered by a folder scan (any format listed in <see cref="AudioFormatCatalog"/>).</summary>
 public sealed record ScannedFile(string FilePath, string RelativePath, long SizeBytes, DateTimeOffset LastWriteTimeUtc);
 
 public sealed record ScanResult(

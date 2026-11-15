@@ -1,0 +1,105 @@
+{
+  "manifestId": "1a2b3c4d5e6f4711a1b2c3d4e5f60718",
+  "rootFolder": "D:\\Music\\Nhạc Trịnh\\Sơn Ca 7",
+  "operation": "edit-all",
+  "createdUtc": "2026-05-01T02:12:44.1234567+00:00",
+  "appVersion": "1.0.0",
+  "manifestPath": "C:\\Users\\<user>\\AppData\\Roaming\\MusicTagger\\backups\\musictagger-edit-all-20260501-091244-1a2b3c4d.json",
+  "entries": [
+    {
+      "relativePath": "01 - Thương về miền Trung.mp3",
+      "metadata": {
+        "title": "Thương về miền Trung",
+        "artist": "Trịnh Công Sơn",
+        "album": "Sơn Ca 7",
+        "albumArtist": "Trịnh Công Sơn",
+        "genre": "Nhạc Trịnh",
+        "year": "1972",
+        "trackNumber": "1",
+        "discNumber": null,
+        "composer": "Trịnh Công Sơn",
+        "comment": null
+      },
+      "tagFormat": "id3v23",
+      "status": "updated",
+      "processedUtc": "2026-05-01T02:12:45.9876543+00:00",
+      "message": null
+    },
+    {
+      "relativePath": "02 - Nhớ mùa thu Hà Nội.mp3",
+      "metadata": {
+        "title": "Nhớ mùa thu Hà Nội",
+        "artist": "Trịnh Công Sơn",
+        "album": "Sơn Ca 7",
+        "albumArtist": "Trịnh Công Sơn",
+        "genre": "Nhạc Trịnh",
+        "year": "1972",
+        "trackNumber": "2",
+        "discNumber": null,
+        "composer": "Trịnh Công Sơn",
+        "comment": "Remaster 2019"
+      },
+      "tagFormat": "id3v24",
+      "status": "unchanged",
+      "processedUtc": "2026-05-01T02:12:46.0043217+00:00",
+      "message": "No field differs from the requested values."
+    },
+    {
+      "relativePath": "03 - Hạ trắng.mp3",
+      "metadata": {
+        "title": "Hạ trắng",
+        "artist": null,
+        "album": "Sơn Ca 7",
+        "albumArtist": null,
+        "genre": null,
+        "year": null,
+        "trackNumber": null,
+        "discNumber": null,
+        "composer": null,
+        "comment": null
+      },
+      "tagFormat": "id3v1",
+      "status": "failed",
+      "processedUtc": "2026-05-01T02:12:46.5000001+00:00",
+      "message": "Access to the file was denied. Check that no other program (player, sync tool) has it locked."
+    },
+    {
+      "relativePath": "04 - Biển nhớ.flac",
+      "metadata": {
+        "title": "Biển nhớ",
+        "artist": "Trịnh Công Sơn",
+        "album": "Sơn Ca 7",
+        "albumArtist": null,
+        "genre": null,
+        "year": null,
+        "trackNumber": "4",
+        "discNumber": null,
+        "composer": null,
+        "comment": null
+      },
+      "tagFormat": "vorbisComment",
+      "status": "updated",
+      "processedUtc": "2026-05-01T02:12:46.8123456+00:00",
+      "message": null
+    },
+    {
+      "relativePath": "05 - Thu âm tại nhà.wav",
+      "metadata": {
+        "title": "Thu âm tại nhà",
+        "artist": null,
+        "album": null,
+        "albumArtist": null,
+        "genre": null,
+        "year": null,
+        "trackNumber": null,
+        "discNumber": null,
+        "composer": null,
+        "comment": null
+      },
+      "tagFormat": "riffInfo",
+      "status": "captured",
+      "processedUtc": null,
+      "message": null
+    }
+  ]
+}

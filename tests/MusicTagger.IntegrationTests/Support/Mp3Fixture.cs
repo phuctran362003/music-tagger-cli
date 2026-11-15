@@ -59,6 +59,20 @@ public sealed class TempWorkspace : IDisposable
 
     public string CreateFile(string relative, int frameCount = 48) => Mp3Fixture.Create(Combine(relative), frameCount);
 
+    /// <summary>Writes an arbitrary fixture (any supported container) into the workspace.</summary>
+    public string CreateFile(string relative, byte[] content)
+    {
+        var path = Combine(relative);
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        File.WriteAllBytes(path, content);
+        return path;
+    }
+
     public void Dispose()
     {
         try

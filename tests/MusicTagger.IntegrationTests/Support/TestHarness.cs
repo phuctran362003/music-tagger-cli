@@ -22,7 +22,7 @@ public sealed class TestHarness : IDisposable
         Planner = new UpdatePlanner(Reader, Probe, Log);
         Executor = new BatchUpdateExecutor(Writer, Backup, Probe, Log);
         Restore = new RestoreService(Reader, Backup, Executor, Probe, Log);
-        Scanner = new Mp3FileScanner(Log);
+        Scanner = new AudioFileScanner(Log);
     }
 
     public TempWorkspace Workspace { get; }
@@ -43,7 +43,7 @@ public sealed class TestHarness : IDisposable
 
     public RestoreService Restore { get; }
 
-    public Mp3FileScanner Scanner { get; }
+    public AudioFileScanner Scanner { get; }
 
     public string Root => Workspace.Root;
 
@@ -55,3 +55,4 @@ public sealed class TestHarness : IDisposable
 
     public void Dispose() => Workspace.Dispose();
 }
+

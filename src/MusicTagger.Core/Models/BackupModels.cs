@@ -17,7 +17,7 @@ public sealed record BackupManifestEntry
 
     public required AudioMetadata Metadata { get; init; }
 
-    public Id3Version Id3Version { get; init; } = Id3Version.Unknown;
+    public TagFormat TagFormat { get; init; } = TagFormat.Unknown;
 
     public BackupEntryStatus Status { get; init; } = BackupEntryStatus.Captured;
 
@@ -53,7 +53,7 @@ public sealed record BackupCaptureItem(
     string FilePath,
     string RelativePath,
     AudioMetadata Metadata,
-    Id3Version Id3Version,
+    TagFormat TagFormat,
     BackupEntryStatus Status,
     string? Message);
 
@@ -72,3 +72,4 @@ public sealed record BackupManifestLoad(BackupManifest? Manifest, IReadOnlyList<
 
     public static BackupManifestLoad Invalid(params string[] errors) => new(null, errors);
 }
+

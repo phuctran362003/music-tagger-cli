@@ -18,11 +18,10 @@ public static class AudioStream
         var start = 0;
         if (file.Length >= 10 && file[0] == 'I' && file[1] == 'D' && file[2] == '3')
         {
-            var major = file[3];
             var flags = file[5];
-            var size = major >= 4
-                ? (file[6] << 21) | (file[7] << 14) | (file[8] << 7) | file[9]
-                : BinaryPrimitives.ReadInt32BigEndian(file.AsSpan(6, 4));
+
+            // The tag size is synch-safe in ID3v2.2, v2.3 and v2.4.
+            var size = (file[6] << 21) | (file[7] << 14) | (file[8] << 7) | file[9];
 
             start = 10 + size;
             if ((flags & 0x10) != 0)

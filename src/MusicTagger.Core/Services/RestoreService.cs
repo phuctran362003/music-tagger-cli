@@ -193,7 +193,7 @@ public sealed class RestoreService
                 [],
                 PreviewStatus.Unchanged,
                 "The stored metadata already matches the backup.",
-                read.Id3Version);
+                read.TagFormat);
         }
 
         update.TryApply(read.Metadata, out _, out var changes);
@@ -208,7 +208,7 @@ public sealed class RestoreService
                 changes,
                 PreviewStatus.Failed,
                 "The file is read-only.",
-                read.Id3Version);
+                read.TagFormat);
         }
 
         return new PlannedFileUpdate(
@@ -219,6 +219,7 @@ public sealed class RestoreService
             changes,
             PreviewStatus.WillUpdate,
             null,
-            read.Id3Version);
+            read.TagFormat);
     }
 }
+

@@ -5,14 +5,15 @@ using MusicTagger.Core.Models;
 namespace MusicTagger.Infrastructure.AudioTags;
 
 /// <summary>
-/// Writes MP3 metadata safely: the tag is written to a temporary copy next to the original,
-/// the copy is verified, and only then does it replace the original file. The audio stream is
-/// never re-encoded or moved, and the original file stays intact when anything fails
-/// (SRS FR-011, NFR-002).
+/// Writes audio metadata safely for every supported container: the tag is written to a
+/// temporary copy next to the original, the copy is verified, and only then does it replace the
+/// original file. The audio stream is never re-encoded or moved, and the original file stays
+/// intact when anything fails (SRS FR-011, NFR-002).
 /// </summary>
 /// <remarks>
 /// TagLib# writes in place, so the temporary-copy strategy is what provides the atomic
-/// replacement. The temp file always lives in the same directory so the rename cannot cross
+/// replacement. The temp file always lives in the same directory (and keeps the original
+/// extension, because the tag library detects the container from it) so the rename cannot cross
 /// a volume boundary.
 /// </remarks>
 public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
@@ -59,6 +60,12 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
             return MetadataWriteResult.Failure("The file no longer exists.");
         }
 
+        if (!AudioFormatCatalog.TryGetForPath(fullPath, out var format))
+        {
+            return MetadataWriteResult.Failure(
+                $"This file type is not supported. Supported formats: {AudioFormatCatalog.DisplayList}.");
+        }
+
         if ((File.GetAttributes(fullPath) & FileAttributes.ReadOnly) != 0)
         {
             return MetadataWriteResult.Failure("The file is read-only.");
@@ -70,12 +77,11 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
             return MetadataWriteResult.Failure("The file path has no parent folder.");
         }
 
-        // The temporary copy lives in the same folder so the final rename cannot cross a
-        // volume boundary. It keeps an .mp3 extension because the tag library detects the
-        // container type from the file name.
+        // The temporary copy lives in the same folder and keeps the original extension, because
+        // TagLib# picks the container from the file name.
         var tempPath = Path.Combine(
             directory,
-            $".{Path.GetFileNameWithoutExtension(fullPath)}.mttmp-{Guid.NewGuid():N}.mp3");
+            $".{Path.GetFileNameWithoutExtension(fullPath)}.mttmp-{Guid.NewGuid():N}{Path.GetExtension(fullPath)}");
         var lastWriteUtc = File.GetLastWriteTimeUtc(fullPath);
         var unixMode = TryGetUnixFileMode(fullPath);
 
@@ -92,10 +98,7 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
             var before = ReadMetadata(tempPath);
             var expected = update.ApplyTo(before);
 
-            // 2. Write the ID3v2 tag on the copy.
-            TagLib.Id3v2.Tag.DefaultVersion = targetVersion.ToTagLibVersion();
-            TagLib.Id3v2.Tag.ForceDefaultVersion = true;
-
+            // 2. Write the tag on the copy.
             using (var file = TagLib.File.Create(tempPath))
             {
                 if (!file.Writeable)
@@ -103,12 +106,31 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
                     return MetadataWriteResult.Failure("The file is not writable (it may be locked by another program).");
                 }
 
-                if (file.GetTag(TagLib.TagTypes.Id3v2, true) is not TagLib.Id3v2.Tag tag)
+                if (format.HonorsId3WriteVersion)
                 {
-                    return MetadataWriteResult.Failure("An ID3v2 tag could not be created for this file.");
+                    TagLib.Id3v2.Tag.DefaultVersion = targetVersion.ToTagLibVersion();
+                    TagLib.Id3v2.Tag.ForceDefaultVersion = true;
                 }
 
-                TagLibMapping.MigrateLegacyTag(file, tag);
+                var tagType = TagLibMapping.PrimaryTagType(format.TagSystem);
+                if (file.GetTag(tagType, true) is not { } tag)
+                {
+                    return MetadataWriteResult.Failure(
+                        $"A {format.DisplayName} tag could not be created for this file.");
+                }
+
+                if (tag is TagLib.Id3v2.Tag id3v2)
+                {
+                    TagLibMapping.MigrateLegacyTag(file, id3v2);
+
+                    // WAV/AIFF: fold LIST/INFO and IDVX chunks into ID3v2 and drop them, so the
+                    // file keeps one tag that the read-back verification can actually check.
+                    if (AudioFormatCatalog.UsesRiffChunks(format))
+                    {
+                        TagLibMapping.MigrateRiffChunkTags(file, id3v2);
+                    }
+                }
+
                 TagLibMapping.ApplyEdits(tag, update);
                 file.Save();
             }
@@ -148,12 +170,13 @@ public sealed class TagLibAudioMetadataWriter : IAudioMetadataWriter
         catch (TagLib.CorruptFileException ex)
         {
             _log.Error($"Corrupt tag data in '{fullPath}'; the file was not modified.", ex);
-            return MetadataWriteResult.Failure("The MP3 tag structure is corrupt; the file was not modified.");
+            return MetadataWriteResult.Failure("The tag structure of this file is corrupt; the file was not modified.");
         }
         catch (TagLib.UnsupportedFormatException ex)
         {
             _log.Error($"Unsupported audio format in '{fullPath}'.", ex);
-            return MetadataWriteResult.Failure("This file is not an MP3 file that can be written.");
+            return MetadataWriteResult.Failure(
+                $"This file type is not supported. Supported formats: {AudioFormatCatalog.DisplayList}.");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

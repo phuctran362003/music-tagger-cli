@@ -24,7 +24,7 @@ public sealed record PlannedFileUpdate(
     IReadOnlyList<FieldChange> Changes,
     PreviewStatus Status,
     string? Message,
-    Id3Version Id3Version = Id3Version.Unknown)
+    TagFormat TagFormat = TagFormat.Unknown)
 {
     public bool WillWrite => Status == PreviewStatus.WillUpdate;
 }
