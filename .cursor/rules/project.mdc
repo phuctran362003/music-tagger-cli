@@ -1,0 +1,15 @@
+---
+description: Đọc tài liệu dự án trước khi diễn giải prompt người dùng
+alwaysApply: true
+---
+
+# Đọc docs trước prompt
+
+Trước khi đọc, diễn giải hoặc thực hiện prompt người dùng, đọc tài liệu dự án theo thứ tự:
+
+1. `docs/MusicTagger_SRS.md` — nguồn yêu cầu chính thức (chức năng, phi chức năng, quy tắc nghiệp vụ, phạm vi MVP, tiêu chí nghiệm thu).
+2. `README.md` — cách build và chạy. Nếu README mâu thuẫn SRS, lấy SRS.
+
+Chỉ sau khi đã đọc xong mới xử lý yêu cầu. Quyết định thiết kế, phạm vi và tiêu chí xong phải bám SRS; không suy diễn tính năng ngoài mục 1.4 (ngoài phạm vi MVP).
+
+Khi SRS không đủ để làm đúng yêu cầu, nói rõ mục còn thiếu rồi hỏi, thay vì tự bịa hành vi.
